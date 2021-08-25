@@ -1,0 +1,50 @@
+#! /bin/bash
+if [[ $1 == '--help' || $1 == '-h' ]]; then
+	cat << EOF
+Exif renamer
+
+Usage: exif_renamer [input]
+
+Possible input:
+	-h --help: displays this help
+	path: renames jpeg files found under the path so, 
+	that the photos are sorted by
+		1. "Create Date" if found in exif data of the image
+		2. "Modification Date" or "Modify Date" else.
+
+The new filenames indicate also the respective date and time.
+
+If no input is specified program renames jpeg files in the current directory.
+EOF
+	exit 0;
+fi
+
+FOLDER=${1:-.}
+FILES=$(ls "$FOLDER" | grep -E '\.jpg$|\.jpeg$|\.JPG|\.JPEG')
+FLAGS=("Create Date" "Modification Date" "Modify Date") 
+DATE_FORMAT='.*[0-9]{4}.*[0-9]{2}.*[0-9]{2}.*'
+
+if [[ -z "$FILES" ]]; then
+	echo "no jpg files found in $FOLDER" >&2
+	exit 1;
+fi
+
+print_file_dates(){
+	while read file; do
+		exif=$(exiftool "$FOLDER"/"$file")
+		exif_date=''
+		for flag in "${FLAGS[@]}"; do
+			exif_date=$(echo "$exif" | grep -E "$flag$DATE_FORMAT" | head -n 1)
+			exif_date=$(echo "$exif_date" | sed -E 's/([^0-9])//g' | cut -c 1-14)
+			[ -n "$exif_date" ] && break
+		done
+		printf "$FOLDER/$file\t$exif_date\n"
+	done<<<"$FILES"
+}
+
+while read line; do
+	src="$(echo "$line" | cut -f 2)" 
+	dst="$FOLDER"/"$(echo "$line" | cut -f 1 | xargs printf "%05d")_$(echo "$line" | cut -f 3).jpg" 
+	echo "$dst" "<-" "$src"
+	mv "$src" "$dst"
+done<<<$(print_file_dates | sort -k 2 | nl)

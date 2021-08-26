@@ -1,6 +1,6 @@
 # bash-utils
-## exif_renamer.sh
-Usage: exif_renamer [input]
+## exif-rename
+Usage: exif-rename [input]
 
 Possible input:
  - -h --help: displays this help

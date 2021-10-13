@@ -4,10 +4,10 @@
 declare -A FILESYSTEMS=(['home']='/home' ['root']='/')
 
 # local folder for backup
-BACKUP_FOLDER="$0"
+BACKUP_FOLDER="$1"
 
 # remote folder for backup
-BACKUP_FOLDER_REMOTE="$1"
+BACKUP_FOLDER_REMOTE="$2"
 
 # number of backups to keep
 KEEP_NUM=2

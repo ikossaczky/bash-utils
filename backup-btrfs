@@ -1,0 +1,83 @@
+#!/bin/bash
+
+# filesystems to backup
+declare -A FILESYSTEMS=(['home']='/home' ['root']='/')
+
+# local folder for backup
+BACKUP_FOLDER="$0"
+
+# remote folder for backup
+BACKUP_FOLDER_REMOTE="$1"
+
+# number of backups to keep
+KEEP_NUM=2
+
+# initialize some more arrays
+declare -A to_remove
+declare -A latest_backup
+
+# checking if all folders exists
+for folder in "${FILESYSTEMS[@]}" "$BACKUP_FOLDER" "$BACKUP_FOLDER_REMOTE"; do
+	[ ! -d "$folder" ] && { echo "Directory $folder DOES NOT exists."; exit 1; }
+done
+
+# get timestamp
+timestamp="$(date '+%Y%m%d%H%M%S')"
+
+# analyze existing backups
+for fs_name in "${!FILESYSTEMS[@]}"; do
+	# filesystem mountpoint
+	fs="${FILESYSTEMS[$fs_name]}";
+	# check existing filesystem backup
+	backups="$(ls $BACKUP_FOLDER | grep "$fs_name"'-[0-9]*$')"
+	backups_remote="$(ls $BACKUP_FOLDER_REMOTE | grep "$fs_name"'-[0-9]*$')"
+	# check if there is same number of bacup local and remote
+	[[ ! $backups == $backups_remote ]] && \
+	 { echo "different numbers of backups of $fs in $BACKUP_FOLDER
+	  and $BACKUP_FOLDER_REMOTE"; exit 1; }
+	# determine latest backup and backups that will be removed
+	to_remove["$fs_name"]="$(echo -e "$backups" | sort -r | tail -n +$(($KEEP_NUM+1)))"
+	latest_backup["$fs_name"]="$(echo -e "$backups" | sort -r | head -n 1)"
+done
+
+
+# confirm removal of backups
+echo -e "
+latest backups (to be used as parent at remote): ${latest_backup[@]} 
+to be removed: ${to_remove[@]}
+OK? (Y/n)
+" 
+read 
+[[ ! "$REPLY" =~ [Yy] ]] && [[ -n "$REPLY" ]] && { echo "ok, no backup, bye!"; exit 0; } 
+
+# perform backup, remove old backups
+for fs_name in "${!FILESYSTEMS[@]}"; do
+	# filesystem mountpoint
+	fs="${FILESYSTEMS[$fs_name]}";
+	# do backup
+	new_backup="$BACKUP_FOLDER/$fs_name-$timestamp"
+	sudo btrfs subvolume snapshot -r "$fs" "$new_backup"
+	# send backup to remote
+	sudo btrfs send -p "$BACKUP_FOLDER/${latest_backup["$fs_name"]}" "$new_backup" | sudo btrfs receive "$BACKUP_FOLDER_REMOTE"
+	
+	# removing old backups
+	if [[ -n "${to_remove["$fs_name"]}" ]]; then
+		echo "removing old backups for $fs"
+		
+		# removing old backups locally
+		pushd "$BACKUP_FOLDER" > /dev/null
+		for fs in ${to_remove["$fs_name"]}; do
+			sudo btrfs subvolume delete "$fs";
+		done
+		popd > /dev/null
+		
+		# removing old backups at remote
+		pushd "$BACKUP_FOLDER_REMOTE" > /dev/null
+		for fs in ${to_remove["$fs_name"]}; do
+			sudo btrfs subvolume delete "$fs";
+		done
+		popd > /dev/null
+	else
+		echo "no old backups to be removed for $fs" 
+	fi	
+done

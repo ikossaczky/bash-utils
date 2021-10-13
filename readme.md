@@ -1,4 +1,14 @@
 # bash-utils
+
+## backup-btrfs
+Script for performing backup of one or more btrfs filesystem.
+- one backup copy is created on local machine
+- second backup copy is sent to remote drive of choice (e.g. USB stick)
+- a fixed number of most recent backups is kept, all older old backups are deleted both locally and on remote drive
+
+Due to the usage of copy-on-write in btrfs, these backups are much faster and take much more memory than standard backups.
+Btrfs filesystem is needed on both local PC and remote drive
+
 ## exif-rename
 Usage: exif-rename [input]
 

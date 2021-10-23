@@ -9,6 +9,18 @@ Script for performing backup of one or more btrfs filesystem.
 Due to the usage of copy-on-write in btrfs, these backups are much faster and take much more memory than standard backups.
 Btrfs filesystem is needed on both local PC and remote drive
 
+## create-launcher
+create-launcher - utility for creating application launcher on for fedora with gnome backend
+
+USAGE: create-launcher [-d] name path-to-executable [path-to-icon]
+- creates symlink to executable with name \"name\" in \$HOME/bin, so that the executable can be called directly from shell by executing \"name\"
+- creates launcher for gnome desktop. Uses the icon, if specified
+	
+OPTIONS:
+
+ - -d launcher and symlink with name \"name\" are deleted
+ - -h --help: displays this help
+
 ## exif-rename
 Usage: exif-rename [input]
 

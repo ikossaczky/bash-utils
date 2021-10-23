@@ -10,7 +10,8 @@ BACKUP_FOLDER="$1"
 BACKUP_FOLDER_REMOTE="$2"
 
 # number of backups to keep
-KEEP_NUM=2
+DEFAULT_KEEP_NUM=2
+KEEP_NUM=${KEEP_NUM:-$DEFAULT_KEEP_NUM}
 
 # initialize some more arrays
 declare -A to_remove

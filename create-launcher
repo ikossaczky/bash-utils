@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# utility for creating launcher on fedora
+# constant parameters
+LAUNCHER_DIR="/usr/share/applications/"
+BIN_SYMLINK_DIR="$HOME/bin/"
+
+# PARSING ARGUMENTS
+if [[ $1 == "--help" || $1 == "-h" ]]; then
+	echo $? $1
+	echo " 
+	create-launcher - utility for creating application launcher on for fedora with gnome backend
+
+	USAGE: create-launcher [-d] name path-to-executable [path-to-icon]
+
+       	- creates symlink to executable with name \"name\" in \$HOME/bin, so that the executable can be called directly from shell by executing \"name\"
+	- creates launcher for gnome desktop. Uses the icon, if specified
+	
+	OPTIONS:
+	-d is specified launcher and symlink with name \"name\" are deleted
+	"
+	exit 0;
+elif [[ $1 == "-d" ]]; then
+	DELETE_MODE=1
+	shift
+fi
+
+shortname="${1:?'First positional argument missing. See --help.'}"
+symlink="$BIN_SYMLINK_DIR/$shortname"
+launcher="$LAUNCHER_DIR/$shortname.desktop"
+
+# DELETE MODE
+
+if (("${DELETE_MODE:=0}" == 1)); then
+	[[ -L "$symlink" ]] || { echo "$symlink is not a symlink or does not exist! "; exit 1; }
+	sudo rm "$launcher"
+	rm "$symlink"
+	exit 0
+fi
+
+# CREATE MODE
+
+executable="${2:?'Second positional argument missing. See --help.'}"
+icon="${3:-"executable"}"
+[[ -f "$executable" ]] || { echo "path $executable doesnt exist! "; exit 1; }
+
+# creating executable symlink
+ln -s "$executable" "$symlink"
+
+# creating desktop launcher
+echo "[Desktop Entry]
+Type=Application
+Name=$shortname
+Comment=$shortname
+Icon=$icon
+Exec=$executable
+Terminal=false
+" | sudo tee "$launcher" > /dev/null
